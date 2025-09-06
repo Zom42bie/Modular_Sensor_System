@@ -1,0 +1,39 @@
+// File: circular_buffer.c
+#include <stdint.h>
+#include <string.h>
+
+#define BUFFER_SIZE 64 // Power of 2 for efficient modulo
+
+typedef struct {
+    int16_t data[BUFFER_SIZE];
+    uint16_t head;
+    uint16_t tail;
+    uint16_t count;
+} CircularBuffer;
+
+CircularBuffer buffer;
+
+// Initialize circular buffer
+void Buffer_Init(void) {
+    buffer.head = 0;
+    buffer.tail = 0;
+    buffer.count = 0;
+}
+
+// Add data to buffer (returns 1 on success, 0 if full)
+uint8_t Buffer_Push(int16_t value) {
+    if (buffer.count >= BUFFER_SIZE) return 0; // Buffer full
+    buffer.data[buffer.head] = value;
+    buffer.head = (buffer.head + 1) & (BUFFER_SIZE - 1); // Modulo for wrap-around
+    buffer.count++;
+    return 1;
+}
+
+// Pop data from buffer (returns 1 on success, 0 if empty)
+uint8_t Buffer_Pop(int16_t *value) {
+    if (buffer.count == 0) return 0; // Buffer empty
+    *value = buffer.data[buffer.tail];
+    buffer.tail = (buffer.tail + 1) & (BUFFER_SIZE - 1);
+    buffer.count--;
+    return 1;
+}

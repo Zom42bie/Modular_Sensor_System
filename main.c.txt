@@ -1,0 +1,42 @@
+// File: main.c
+#include "stm32f4xx_hal.h"
+#include "tmp102_i2c.h"
+#include "adxl345_spi.h"
+#include "circular_buffer.h"
+#include <stdio.h>
+
+void SystemClock_Config(void); // Assume defined via STM32CubeMX
+
+int main(void) {
+    HAL_Init();
+    SystemClock_Config();
+    TMP102_Init(&hi2c1);
+    ADXL345_Init(&hspi1);
+    Buffer_Init();
+
+    while (1) {
+        // Read sensor data
+        int16_t temp = TMP102_ReadTemp(); // Fixed-point temperature
+        int16_t accel_x = ADXL345_ReadX(); // X-axis acceleration
+
+        // Store in circular buffer
+        Buffer_Push(temp);
+        Buffer_Push(accel_x);
+
+        // Process data (e.g., average last 10 samples)
+        int16_t value;
+        int32_t temp_sum = 0, accel_sum = 0;
+        uint8_t count = 0;
+        for (uint16_t i = 0; i < buffer.count && count < 10; i++) {
+            Buffer_Pop(&value);
+            if (count % 2 == 0) temp_sum += value;
+            else accel_sum += value;
+            count++;
+        }
+
+        // Example: Log averages (in real system, send to UART or process further)
+        printf("Avg Temp: %d, Avg Accel: %d\n", temp_sum / (count / 2), accel_sum / (count / 2));
+
+        HAL_Delay(10); // 10ms loop for real-time monitoring
+    }
+}

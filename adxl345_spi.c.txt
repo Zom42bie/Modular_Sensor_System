@@ -1,0 +1,38 @@
+// File: adxl345_spi.c
+#include "stm32f4xx_hal.h"
+#include <stdint.h>
+
+// ADXL345 SPI registers
+#define ADXL345_ADDR 0x53
+#define DATA_FORMAT 0x31
+#define DATAX0 0x32
+#define SPI_READ 0x80
+#define SPI_MB 0x40 // Multi-byte read
+
+SPI_HandleTypeDef hspi1;
+
+// Initialize ADXL345 over SPI
+void ADXL345_Init(SPI_HandleTypeDef *hspi) {
+    hspi1 = *hspi;
+    uint8_t tx_data[2];
+
+    // Set data format: ±2g, 10-bit resolution
+    tx_data[0] = DATA_FORMAT;
+    tx_data[1] = 0x00;
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS low
+    HAL_SPI_Transmit(&hspi1, tx_data, 2, 100);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS high
+}
+
+// Read X-axis acceleration (returns 10-bit value)
+int16_t ADXL345_ReadX(void) {
+    uint8_t tx_data = DATAX0 | SPI_READ | SPI_MB;
+    uint8_t rx_data[2];
+
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // CS low
+    HAL_SPI_Transmit(&hspi1, &tx_data, 1, 100);
+    HAL_SPI_Receive(&hspi1, rx_data, 2, 100);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); // CS high
+
+    return (int16_t)((rx_data[1] << 8) | rx_data[0]); // 10-bit data
+}
